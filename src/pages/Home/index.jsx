@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { APP_MODE } from '@/config';
 
 const Home = () => {
 	const [videos, setVideos] = useState([]);
@@ -52,6 +53,24 @@ const Home = () => {
 			videoRef.current.play().catch(err => console.log('Autoplay prevented:', err));
 		}
 	}, [currentVideo]);
+
+	// Effect for handling video end
+	useEffect(() => {
+		const videoElement = videoRef.current;
+		if (!videoElement) return;
+
+		const handleVideoEnd = () => {
+			const currentIndex = videos.findIndex(v => v.path === currentVideo.path);
+			const nextIndex = (currentIndex + 1) % videos.length;
+			setCurrentVideo(videos[nextIndex]);
+		};
+
+		videoElement.addEventListener('ended', handleVideoEnd);
+
+		return () => {
+			videoElement.removeEventListener('ended', handleVideoEnd);
+		};
+	}, [currentVideo, videos]);
 
 	// Effect for keyboard shortcuts
 	useEffect(() => {
@@ -149,6 +168,14 @@ const Home = () => {
 			</div>
 		);
 	};
+
+	if (APP_MODE === 'prod') {
+		return (
+			<video ref={videoRef} id="videoPlayer" src={currentVideo?.url} style={{ width: '100vw', height: '100vh', objectFit: 'cover' }}>
+				Your browser does not support the video tag.
+			</video>
+		);
+	}
 
 	return (
 		<div className="container">

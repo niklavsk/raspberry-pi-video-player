@@ -28,6 +28,11 @@
 
 import './index.css';
 import './app.jsx';
+import { APP_MODE } from './config';
+
+if (APP_MODE === 'prod') {
+	document.body.classList.add('prod');
+}
 
 console.log(
   '👋 This message is being logged by "renderer.js", included via webpack',

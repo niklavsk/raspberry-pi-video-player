@@ -4,7 +4,7 @@ const { registerStreamProtocol } = require('./utils/streamProtocol');
 
 const fs = require('node:fs').promises;
 const { createReadStream } = require('node:fs');
-const { VIDEO_FOLDER, VIDEO_EXTENSIONS } = require('./config');
+const { VIDEO_FOLDER, VIDEO_EXTENSIONS, APP_MODE } = require('./config');
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) {
@@ -27,6 +27,7 @@ const createWindow = () => {
 	const mainWindow = new BrowserWindow({
 		width: 800,
 		height: 600,
+		fullscreen: true,
 		webPreferences: {
 			preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
 			contextIsolation: true,
@@ -39,7 +40,9 @@ const createWindow = () => {
   mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
 
   // Open the DevTools.
-  mainWindow.webContents.openDevTools();
+  if (APP_MODE === 'debug') {
+		mainWindow.webContents.openDevTools();
+	}
 };
 
 // Verify video file by checking magic bytes
