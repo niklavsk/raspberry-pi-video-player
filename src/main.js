@@ -1,5 +1,7 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('node:path');
+const fs = require('fs');
+const { registerVideoProtocol, protocolName } = require('./customProtocol');
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) {
@@ -13,6 +15,7 @@ const createWindow = () => {
     height: 600,
     webPreferences: {
       preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
+      webSecurity: false
     },
   });
 
@@ -27,7 +30,27 @@ const createWindow = () => {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
+  registerVideoProtocol();
   createWindow();
+
+  ipcMain.handle('get-videos', async (event) => {
+    // const videosPath = path.join(app.getAppPath(), 'videos');
+    const videosPath = '/Users/niklavs/Documents/videos/';
+    
+	try {
+      const files = await fs.promises.readdir(videosPath);
+      const videoFiles = files
+        .filter(file => /\.(mp4|webm|ogv|mov)$/i.test(file))
+        .map(file => ({
+          src: `${protocolName}://${path.join(videosPath, file)}`,
+          type: `video/${path.extname(file).substring(1) === 'mov' ? 'quicktime' : path.extname(file).substring(1)}`,
+        }));
+      return videoFiles;
+    } catch (error) {
+      console.error('Failed to get videos:', error);
+      return [];
+    }
+  });
 
   // On OS X it's common to re-create a window in the app when the
   // dock icon is clicked and there are no other windows open.
