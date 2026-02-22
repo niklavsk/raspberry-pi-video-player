@@ -3,6 +3,6 @@
 
 const { contextBridge, ipcRenderer } = require('electron');
 
-contextBridge.exposeInMainWorld('electron', {
-  getVideos: () => ipcRenderer.invoke('get-videos'),
+contextBridge.exposeInMainWorld('electronAPI', {
+  getVideoFiles: () => ipcRenderer.invoke('get-video-files')
 });
