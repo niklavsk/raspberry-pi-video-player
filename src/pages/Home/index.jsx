@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { APP_MODE } from '@/config';
+import Playlist from '@/pages/Home/playlist';
+import { formatFileSize } from '@/helpers/format';
 
 const Home = () => {
 	const [videos, setVideos] = useState([]);
@@ -7,22 +9,6 @@ const Home = () => {
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
 	const videoRef = useRef(null);
-
-	// Format file size
-	const formatFileSize = (bytes) => {
-		if (bytes < 1024) return `${bytes} B`;
-		if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`;
-		if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
-		return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
-	};
-
-	// Format duration
-	const formatDuration = (seconds) => {
-		if (!seconds || isNaN(seconds)) return '--:--';
-		const mins = Math.floor(seconds / 60);
-		const secs = Math.floor(seconds % 60);
-		return `${mins}:${secs.toString().padStart(2, '0')}`;
-	};
 
 	// Load video files
 	useEffect(() => {
@@ -126,49 +112,6 @@ const Home = () => {
 		};
 	}, []);
 
-	const handleVideoSelection = (videoFile) => {
-		setCurrentVideo(videoFile);
-	};
-
-	const VideoThumbnail = ({ videoFile }) => {
-		const thumbVideoRef = useRef(null);
-		const [duration, setDuration] = useState(null);
-
-		useEffect(() => {
-			const videoElement = thumbVideoRef.current;
-			if (!videoElement) return;
-
-			const onLoadedMetadata = () => {
-				setDuration(videoElement.duration);
-				const seekTime = Math.min(1, videoElement.duration * 0.1);
-				videoElement.currentTime = seekTime;
-			};
-
-			videoElement.addEventListener('loadedmetadata', onLoadedMetadata);
-
-			return () => {
-				videoElement.removeEventListener('loadedmetadata', onLoadedMetadata);
-			};
-		}, [videoFile]);
-
-		return (
-			<div className="video-thumbnail">
-				<video
-					ref={thumbVideoRef}
-					src={videoFile.url}
-					muted
-					preload="metadata"
-					style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-				/>
-				{duration && (
-					<div className="video-duration">
-						{formatDuration(duration)}
-					</div>
-				)}
-			</div>
-		);
-	};
-
 	if (APP_MODE === 'prod') {
 		return (
 			<video ref={videoRef} id="videoPlayer" src={currentVideo?.url} style={{ width: '100vw', height: '100vh', objectFit: 'cover' }}>
@@ -193,33 +136,7 @@ const Home = () => {
 				<p><strong>File Size:</strong> <span id="currentVideoSize">{currentVideo ? formatFileSize(currentVideo.size) : '-'}</span></p>
 			</div>
 
-			<div id="videoListContainer">
-				<h2 style={{ marginTop: '20px', marginBottom: '10px', color: '#333', fontSize: '1.2em' }}>📋 Playlist</h2>
-				<div id="videoList" className={loading ? 'loading' : 'video-list'}>
-					{loading && 'Loading videos...'}
-					{error && <p className="error">{error}</p>}
-					{!loading && !error && videos.length === 0 && <p className="error">No video files found in the video folder.</p>}
-					{videos.map((videoFile) => (
-						<div
-							key={videoFile.path}
-							className={`video-item ${currentVideo?.path === videoFile.path ? 'active' : ''}`}
-							onClick={() => handleVideoSelection(videoFile)}
-						>
-							<VideoThumbnail videoFile={videoFile} />
-							<div className="video-details">
-								<div className="video-item-name" title={videoFile.name}>
-									{videoFile.name}
-								</div>
-								<div className="video-item-meta">
-									<span className="video-item-size">
-										{formatFileSize(videoFile.size)}
-									</span>
-								</div>
-							</div>
-						</div>
-					))}
-				</div>
-			</div>
+			<Playlist videos={videos} currentVideo={currentVideo} setCurrentVideo={setCurrentVideo} loading={loading} error={error} />
 		</div>
 	);
 };

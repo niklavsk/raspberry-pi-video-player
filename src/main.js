@@ -14,11 +14,11 @@ if (require('electron-squirrel-startup')) {
 protocol.registerSchemesAsPrivileged([{
 	scheme: 'app',
 	privileges: {
-	standard: true,
-	secure: true,
-	supportFetchAPI: true,
-	stream: true,        // enable video/audio streaming
-	bypassCSP: true
+		standard: true,
+		secure: true,
+		supportFetchAPI: true,
+		stream: true,        // enable video/audio streaming
+		bypassCSP: true
 	}
 }]);
 
