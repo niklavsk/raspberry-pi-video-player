@@ -11,8 +11,33 @@ const Home = () => {
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
 	const videoRef = useRef(null);
+	const startTimeRef = useRef(Date.now());
+	const isSwitchingFolders = useRef(false);
 
 	const currentVideo = videos[currentVideoIndex];
+
+	const calculateSeekTime = (folder) => {
+		if (!folder) return 0;
+
+		const elapsedTime = (Date.now() - startTimeRef.current) / 1000; // in seconds
+		const loopCount = Math.floor(elapsedTime / folder.totalDuration);
+		const timeInPlaylist = elapsedTime - (loopCount * folder.totalDuration);
+
+		let accumulatedDuration = 0;
+		for (let i = 0; i < folder.videos.length; i++) {
+			const video = folder.videos[i];
+			if (accumulatedDuration + video.duration >= timeInPlaylist) {
+				const seekTime = timeInPlaylist - accumulatedDuration;
+				setCurrentVideoIndex(i);
+				return seekTime;
+			}
+			accumulatedDuration += video.duration;
+		}
+
+		// Fallback to the start of the playlist
+		setCurrentVideoIndex(0);
+		return 0;
+	};
 
 	// Load video files on initial render
 	useEffect(() => {
@@ -25,9 +50,10 @@ const Home = () => {
 				setFolders(videoFolders);
 
 				if (videoFolders.length > 0) {
-					setVideos(videoFolders[0].videos);
-					if (videoFolders[0].videos.length > 0) {
-						setCurrentVideoIndex(0);
+					const initialFolder = videoFolders[0];
+					setVideos(initialFolder.videos);
+					if (initialFolder.videos.length > 0) {
+						calculateSeekTime(initialFolder);
 					}
 				}
 			} catch (err) {
@@ -44,8 +70,23 @@ const Home = () => {
 	// Effect to play video when currentVideo changes
 	useEffect(() => {
 		if (currentVideo && videoRef.current) {
-			videoRef.current.load();
-			videoRef.current.play().catch(err => console.log('Autoplay prevented:', err));
+			const videoElement = videoRef.current;
+
+			const onLoadedMetadata = () => {
+				if (isSwitchingFolders.current) {
+					const seekTime = calculateSeekTime(folders[currentFolderIndex]);
+					videoElement.currentTime = seekTime;
+					isSwitchingFolders.current = false; // Reset after seeking
+				}
+				videoElement.play().catch(err => console.log('Autoplay prevented:', err));
+			};
+
+			videoElement.addEventListener('loadedmetadata', onLoadedMetadata);
+			videoElement.load();
+
+			return () => {
+				videoElement.removeEventListener('loadedmetadata', onLoadedMetadata);
+			};
 		}
 	}, [currentVideo]);
 
@@ -57,6 +98,11 @@ const Home = () => {
 		const handleVideoEnd = () => {
 			const nextIndex = (currentVideoIndex + 1) % videos.length;
 			setCurrentVideoIndex(nextIndex);
+			// When the video ends, we don't want to seek, just play the next one.
+			if (videoElement) {
+				videoElement.currentTime = 0;
+				videoElement.play().catch(err => console.log('Autoplay prevented on loop:', err));
+			}
 		};
 
 		videoElement.addEventListener('ended', handleVideoEnd);
@@ -72,10 +118,12 @@ const Home = () => {
 			if (!videoRef.current) return;
 
 			const changeFolder = (direction) => {
+				isSwitchingFolders.current = true;
 				const newIndex = (currentFolderIndex + direction + folders.length) % folders.length;
 				setCurrentFolderIndex(newIndex);
-				setVideos(folders[newIndex].videos);
-				setCurrentVideoIndex(0);
+				const newFolder = folders[newIndex];
+				setVideos(newFolder.videos);
+				calculateSeekTime(newFolder);
 			};
 
 			switch (e.key) {

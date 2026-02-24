@@ -60,7 +60,7 @@ function getVideoDurationSync(filePath) {
 		const command = `"${ffprobePath}" -v quiet -print_format json -show_format "${filePath}"`;
 		const output = require('child_process').execSync(command);
 		const metadata = JSON.parse(output);
-		return metadata.format.duration;
+		return parseFloat(metadata.format.duration);
 	} catch (err) {
 		console.error(`Error getting duration for ${filePath}:`, err);
 		return 0;
