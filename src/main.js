@@ -4,16 +4,6 @@ const { registerStreamProtocol } = require('./utils/streamProtocol');
 
 const fs = require('node:fs');
 const { VIDEO_FOLDER, VIDEO_EXTENSIONS, APP_MODE } = require('./config');
-const ffmpeg = require('fluent-ffmpeg');
-const ffprobePath = require('ffprobe-static').path;
-
-try {
-	fs.chmodSync(ffprobePath, '755');
-} catch (error) {
-	console.error('Error setting ffprobe permissions:', error);
-}
-
-ffmpeg.setFfprobePath(ffprobePath);
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) {
@@ -54,21 +44,6 @@ const createWindow = () => {
 	}
 };
 
-// Function to get video duration
-function getVideoDurationSync(filePath) {
-	try {
-		const command = `"${ffprobePath}" -v quiet -print_format json -show_format "${filePath}"`;
-		const output = require('child_process').execSync(command);
-		const metadata = JSON.parse(output);
-		return parseFloat(metadata.format.duration);
-	} catch (err) {
-		console.error(`Error getting duration for ${filePath}:`, err);
-		return 0;
-	}
-}
-
-// Verify video file by checking magic bytes
-
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
@@ -87,7 +62,6 @@ app.whenReady().then(() => {
 					const folderPath = path.join(VIDEO_FOLDER, dirent.name);
 					const files = fs.readdirSync(folderPath);
 					const videoFiles = [];
-					let totalDuration = 0;
 
 					for (const file of files) {
 						const filePath = path.join(folderPath, file);
@@ -98,16 +72,12 @@ app.whenReady().then(() => {
 								const stats = fs.statSync(filePath);
 
 								if (stats.isFile() && stats.size > 0) {
-									const duration = getVideoDurationSync(filePath);
-									totalDuration += duration;
-									
 									const relativePath = path.join(dirent.name, file);
 									videoFiles.push({
 										name: file,
 										size: stats.size,
 										path: relativePath,
 										url: `app://video/${encodeURIComponent(relativePath)}`,
-										duration: duration
 									});
 								}
 							} catch (err) {
@@ -117,7 +87,7 @@ app.whenReady().then(() => {
 					}
 
 					if (videoFiles.length > 0) {
-						allFolders.push({ name: dirent.name, videos: videoFiles, totalDuration: totalDuration });
+						allFolders.push({ name: dirent.name, videos: videoFiles });
 					}
 				}
 			}

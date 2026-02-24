@@ -41,20 +41,67 @@ const Home = () => {
 
 	// Load video files on initial render
 	useEffect(() => {
+		const loadAllDurations = async (videoFolders) => {
+			const allVideos = videoFolders.flatMap(f => f.videos);
+			const durationPromises = allVideos.map(video =>
+				new Promise((resolve) => {
+					const videoEl = document.createElement('video');
+					videoEl.preload = 'metadata';
+					videoEl.onloadedmetadata = () => {
+						resolve({ path: video.path, duration: videoEl.duration });
+					};
+					videoEl.onerror = (e) => {
+						console.error(`Error loading metadata for ${video.path}:`, e);
+						// Resolve with 0 duration on error to not block the process
+						resolve({ path: video.path, duration: 0 });
+					};
+					videoEl.src = video.url;
+				})
+			);
+
+			try {
+				const durations = await Promise.all(durationPromises);
+				const durationMap = durations.reduce((acc, { path, duration }) => {
+					acc[path] = duration;
+					return acc;
+				}, {});
+
+				return videoFolders.map(folder => {
+					let totalDuration = 0;
+					const videosWithDuration = folder.videos.map(video => {
+						const duration = durationMap[video.path] || 0;
+						totalDuration += duration;
+						return { ...video, duration };
+					});
+					return { ...folder, videos: videosWithDuration, totalDuration };
+				});
+			} catch (err) {
+				console.error('Error loading video durations:', err);
+				setError(`Error loading video durations: ${err.message}`);
+				return videoFolders; // Return original folders on error
+			}
+		};
+
 		const loadVideoFiles = async () => {
 			setLoading(true);
+			setError(null);
 
 			try {
 				const videoFolders = await window.electronAPI.getVideoFiles();
-				console.log('Found video folders:', videoFolders);
-				setFolders(videoFolders);
 
 				if (videoFolders.length > 0) {
-					const initialFolder = videoFolders[0];
+					const foldersWithDurations = await loadAllDurations(videoFolders);
+					setFolders(foldersWithDurations);
+
+					const initialFolder = foldersWithDurations[0];
 					setVideos(initialFolder.videos);
+
 					if (initialFolder.videos.length > 0) {
 						calculateSeekTime(initialFolder);
 					}
+				} else {
+					setFolders([]);
+					setVideos([]);
 				}
 			} catch (err) {
 				console.error('Error loading video files:', err);
