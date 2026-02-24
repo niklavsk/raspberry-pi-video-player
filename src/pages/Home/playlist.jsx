@@ -2,9 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 
 import { formatDuration, formatFileSize } from '@/helpers/format';
 
-const Playlist = ({ videos, currentVideo, setCurrentVideo, loading, error }) => {
-	const handleVideoSelection = (videoFile) => {
-		setCurrentVideo(videoFile);
+const Playlist = ({ videos, currentVideoIndex, setCurrentVideoIndex, loading, error }) => {
+	const handleVideoSelection = (index) => {
+		setCurrentVideoIndex(index);
 	};
 
 	const VideoThumbnail = ({ videoFile }) => {
@@ -53,11 +53,11 @@ const Playlist = ({ videos, currentVideo, setCurrentVideo, loading, error }) => 
 				{loading && 'Loading videos...'}
 				{error && <p className="error">{error}</p>}
 				{!loading && !error && videos.length === 0 && <p className="error">No video files found in the video folder.</p>}
-				{videos.map((videoFile) => (
+				{videos.map((videoFile, index) => (
 					<div
 						key={videoFile.path}
-						className={`video-item ${currentVideo?.path === videoFile.path ? 'active' : ''}`}
-						onClick={() => handleVideoSelection(videoFile)}
+						className={`video-item ${currentVideoIndex === index ? 'active' : ''}`}
+						onClick={() => handleVideoSelection(index)}
 					>
 						<VideoThumbnail videoFile={videoFile} />
 						<div className="video-details">

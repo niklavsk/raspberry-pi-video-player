@@ -4,5 +4,5 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
-  getVideoFiles: () => ipcRenderer.invoke('get-video-files')
+	getVideoFiles: () => ipcRenderer.invoke('get-video-files')
 });

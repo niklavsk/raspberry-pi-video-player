@@ -4,22 +4,31 @@ import Playlist from '@/pages/Home/playlist';
 import { formatFileSize } from '@/helpers/format';
 
 const Home = () => {
+	const [folders, setFolders] = useState([]);
+	const [currentFolderIndex, setCurrentFolderIndex] = useState(0);
 	const [videos, setVideos] = useState([]);
-	const [currentVideo, setCurrentVideo] = useState(null);
+	const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
 	const videoRef = useRef(null);
 
-	// Load video files
+	const currentVideo = videos[currentVideoIndex];
+
+	// Load video files on initial render
 	useEffect(() => {
 		const loadVideoFiles = async () => {
-			try {
-				const videoFiles = await window.electronAPI.getVideoFiles();
-				console.log('Found video files:', videoFiles);
-				setVideos(videoFiles);
+			setLoading(true);
 
-				if (videoFiles.length > 0) {
-					setCurrentVideo(videoFiles[0]);
+			try {
+				const videoFolders = await window.electronAPI.getVideoFiles();
+				console.log('Found video folders:', videoFolders);
+				setFolders(videoFolders);
+
+				if (videoFolders.length > 0) {
+					setVideos(videoFolders[0].videos);
+					if (videoFolders[0].videos.length > 0) {
+						setCurrentVideoIndex(0);
+					}
 				}
 			} catch (err) {
 				console.error('Error loading video files:', err);
@@ -46,9 +55,8 @@ const Home = () => {
 		if (!videoElement) return;
 
 		const handleVideoEnd = () => {
-			const currentIndex = videos.findIndex(v => v.path === currentVideo.path);
-			const nextIndex = (currentIndex + 1) % videos.length;
-			setCurrentVideo(videos[nextIndex]);
+			const nextIndex = (currentVideoIndex + 1) % videos.length;
+			setCurrentVideoIndex(nextIndex);
 		};
 
 		videoElement.addEventListener('ended', handleVideoEnd);
@@ -56,49 +64,26 @@ const Home = () => {
 		return () => {
 			videoElement.removeEventListener('ended', handleVideoEnd);
 		};
-	}, [currentVideo, videos]);
+	}, [currentVideoIndex, videos]);
 
 	// Effect for keyboard shortcuts
 	useEffect(() => {
 		const handleKeyDown = (e) => {
 			if (!videoRef.current) return;
 
-			const videoElement = videoRef.current;
+			const changeFolder = (direction) => {
+				const newIndex = (currentFolderIndex + direction + folders.length) % folders.length;
+				setCurrentFolderIndex(newIndex);
+				setVideos(folders[newIndex].videos);
+				setCurrentVideoIndex(0);
+			};
 
 			switch (e.key) {
-				case 'ArrowRight':
-					videoElement.currentTime += 5; // Seek forward 5 seconds
+				case 'n':
+					changeFolder(1);
 					break;
-				case 'ArrowLeft':
-					videoElement.currentTime -= 5; // Seek backward 5 seconds
-					break;
-				case ' ':
-					if (videoElement.paused) {
-						videoElement.play();
-					} else {
-						videoElement.pause();
-					}
-					e.preventDefault(); // Prevent space from scrolling
-					break;
-				case 'ArrowUp':
-					if (videoElement.volume < 1) {
-						videoElement.volume = Math.min(1, videoElement.volume + 0.1);
-					}
-					break;
-				case 'ArrowDown':
-					if (videoElement.volume > 0) {
-						videoElement.volume = Math.max(0, videoElement.volume - 0.1);
-					}
-					break;
-				case 'f':
-					if (document.fullscreenElement) {
-						document.exitFullscreen();
-					} else {
-						videoRef.current.requestFullscreen();
-					}
-					break;
-				case 'm':
-					videoElement.muted = !videoElement.muted;
+				case 'p':
+					changeFolder(-1);
 					break;
 				default:
 					break;
@@ -110,7 +95,7 @@ const Home = () => {
 		return () => {
 			document.removeEventListener('keydown', handleKeyDown);
 		};
-	}, []);
+	}, [currentFolderIndex, folders]);
 
 	if (APP_MODE === 'prod') {
 		return (
@@ -132,11 +117,12 @@ const Home = () => {
 
 			<div className="info" id="videoInfo">
 				<p><strong>Protocol:</strong> Custom app:// protocol</p>
-				<p><strong>Video Source:</strong> <span id="currentVideoSource">{currentVideo?.name || 'No video selected'}</span></p>
+				<p><strong>Current Folder:</strong> <span id="currentVideoSource">{folders[currentFolderIndex]?.name || 'No folder selected'}. Index: {currentFolderIndex}</span></p>
+				<p><strong>Video Source:</strong> <span id="currentVideoSource">{currentVideo?.name || 'No video selected'}. Index: {currentVideoIndex}</span></p>
 				<p><strong>File Size:</strong> <span id="currentVideoSize">{currentVideo ? formatFileSize(currentVideo.size) : '-'}</span></p>
 			</div>
 
-			<Playlist videos={videos} currentVideo={currentVideo} setCurrentVideo={setCurrentVideo} loading={loading} error={error} />
+			<Playlist videos={videos} currentVideoIndex={currentVideoIndex} setCurrentVideoIndex={setCurrentVideoIndex} loading={loading} error={error} />
 		</div>
 	);
 };
