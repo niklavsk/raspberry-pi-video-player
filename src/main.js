@@ -48,7 +48,6 @@ app.whenReady().then(() => {
 
   // IPC handler to get list of video files from all subdirectories
   ipcMain.handle('get-video-files', () => {
-    return [];
     try {
       const subdirectories = fs.readdirSync(VIDEO_FOLDER, { withFileTypes: true });
       const allFolders = [];
