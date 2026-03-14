@@ -6,3 +6,11 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('electronAPI', {
 	getVideoFiles: () => ipcRenderer.invoke('get-video-files')
 });
+
+contextBridge.exposeInMainWorld('electron', {
+  onGpioIn: (handler) => {
+    ipcRenderer.addListener('gpio-in', (...args) => {
+      handler(...args);
+    });
+  },
+});
