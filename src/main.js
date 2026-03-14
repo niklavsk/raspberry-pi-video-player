@@ -108,7 +108,7 @@ app.whenReady().then(() => {
 
   const postGpioIn = (id, value) => {
     let window = BrowserWindow.getAllWindows()[0];
-    window.webContents.postMessage('gpio-in', { id: 'random', value });
+    window.webContents.postMessage('gpio-in', { id, value });
   }
 
   let os = require('os');
