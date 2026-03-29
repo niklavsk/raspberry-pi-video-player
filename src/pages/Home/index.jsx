@@ -10,11 +10,23 @@ const Home = () => {
 	const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
+	const [webcamStream, setWebcamStream] = useState(null);
 	const videoRef = useRef(null);
+	const webcamVideoRef = useRef(null);
 	const startTimeRef = useRef(Date.now());
 	const isSwitchingFolders = useRef(false);
 
 	const currentVideo = videos[currentVideoIndex];
+
+	const requestCameraPermission = async () => {
+		try {
+			const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+			setWebcamStream(stream);
+		} catch (err) {
+			console.error("Error accessing webcam:", err);
+			setError("Error accessing webcam. Please ensure permissions are granted.");
+		}
+	};
 
 	const calculateSeekTime = (folder) => {
 		if (!folder) return 0;
@@ -38,6 +50,17 @@ const Home = () => {
 		setCurrentVideoIndex(0);
 		return 0;
 	};
+
+	useEffect(() => {
+		if (webcamStream && webcamVideoRef.current) {
+			webcamVideoRef.current.srcObject = webcamStream;
+			webcamVideoRef.current.play().catch(err => console.log('Webcam autoplay prevented:', err));
+		}
+	}, [webcamStream]);
+
+	useEffect(() => {
+		requestCameraPermission();
+	}, []);
 
 	// Load video files on initial render
 	useEffect(() => {
@@ -88,12 +111,31 @@ const Home = () => {
 
 			try {
 				const videoFolders = await window.electronAPI.getVideoFiles();
+				let allFolders = [];
 
 				if (videoFolders.length > 0) {
 					const foldersWithDurations = await loadAllDurations(videoFolders);
-					setFolders(foldersWithDurations);
+					allFolders = [...foldersWithDurations];
+				}
 
-					const initialFolder = foldersWithDurations[0];
+				if (webcamStream) {
+					allFolders.push({
+						name: 'Webcam',
+						path: 'webcam',
+						videos: [{
+							name: 'Webcam',
+							path: 'webcam',
+							url: '',
+							isWebcam: true,
+							duration: Infinity,
+						}],
+						totalDuration: Infinity,
+					});
+				}
+
+				if (allFolders.length > 0) {
+					setFolders(allFolders);
+					const initialFolder = allFolders[0];
 					setVideos(initialFolder.videos);
 
 					if (initialFolder.videos.length > 0) {
@@ -115,12 +157,20 @@ const Home = () => {
 
 		// Expose loadVideoFiles to be called from a button
 		window.loadVideoFiles = loadVideoFiles;
-	}, []);
+	}, [webcamStream]);
 
 	// Effect to play video when currentVideo changes
 	useEffect(() => {
 		if (currentVideo && videoRef.current) {
 			const videoElement = videoRef.current;
+
+			if (currentVideo.isWebcam) {
+				videoElement.srcObject = webcamStream;
+				videoElement.play().catch(err => console.log('Autoplay prevented:', err));
+				return;
+			} else {
+				videoElement.srcObject = null; // Clear srcObject if it was a webcam
+			}
 			
 			const onLoadedMetadata = () => {
 				if (isSwitchingFolders.current) {
@@ -138,7 +188,7 @@ const Home = () => {
 				videoElement.removeEventListener('loadedmetadata', onLoadedMetadata);
 			};
 		}
-	}, [currentVideo]);
+	}, [currentVideo, webcamStream]);
 
 	// Effect for handling video end
 	useEffect(() => {
@@ -232,6 +282,10 @@ const Home = () => {
 		<div className="container">
 			<h1>🎬 Electron Video Player</h1>
 
+			{/* <div className="video-wrapper">
+				<video ref={webcamVideoRef} id="webcamPlayer" muted autoPlay playsInline style={{ width: '100%', border: '1px solid #ccc', marginBottom: '1rem' }} />
+			</div> */}
+
 			<div className="video-wrapper">
 				<video ref={videoRef} id="videoPlayer" controls src={currentVideo?.url}>
 					Your browser does not support the video tag.
@@ -245,7 +299,7 @@ const Home = () => {
 				<p><strong>File Size:</strong> <span id="currentVideoSize">{currentVideo ? formatFileSize(currentVideo.size) : '-'}</span></p>
 			</div>
 
-			<Playlist videos={videos} currentVideoIndex={currentVideoIndex} setCurrentVideoIndex={setCurrentVideoIndex} loading={loading} error={error} />
+			{/* <Playlist videos={videos} currentVideoIndex={currentVideoIndex} setCurrentVideoIndex={setCurrentVideoIndex} loading={loading} error={error} /> */}
 		</div>
 	);
 };

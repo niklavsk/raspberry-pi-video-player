@@ -30,17 +30,23 @@ const Playlist = ({ videos, currentVideoIndex, setCurrentVideoIndex, loading, er
 
 		return (
 			<div className="video-thumbnail">
-				<video
-					ref={thumbVideoRef}
-					src={videoFile.url}
-					muted
-					preload="metadata"
-					style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-				/>
-				{duration && (
-					<div className="video-duration">
-						{formatDuration(duration)}
-					</div>
+				{videoFile.isWebcam ? (
+					<div className="webcam-thumbnail">📷</div>
+				) : (
+					<>
+						<video
+							ref={thumbVideoRef}
+							src={videoFile.url}
+							muted
+							preload="metadata"
+							style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+						/>
+						{duration && (
+							<div className="video-duration">
+								{formatDuration(duration)}
+							</div>
+						)}
+					</>
 				)}
 			</div>
 		);
