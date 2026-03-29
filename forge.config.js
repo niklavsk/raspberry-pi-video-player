@@ -1,28 +1,27 @@
+const { MakerZIP } = require('@electron-forge/maker-zip');
+const { MakerDeb } = require('@electron-forge/maker-deb');
 const { FusesPlugin } = require('@electron-forge/plugin-fuses');
 const { FuseV1Options, FuseVersion } = require('@electron/fuses');
 
 module.exports = {
   packagerConfig: {
-    asar: true,
+  asar: true,
+	prune: true,
+    ignore: (file) => {
+      if (file) {
+        const keep = file.startsWith('/.vite') || file.startsWith('/node_modules');
+        return !keep;
+      }
+      return false;
+    },
   },
-  rebuildConfig: {},
+  rebuildConfig: {
+    force: true,
+    onlyModules: ['epoll'],
+  },
   makers: [
-    {
-      name: '@electron-forge/maker-squirrel',
-      config: {},
-    },
-    {
-      name: '@electron-forge/maker-zip',
-      platforms: ['darwin'],
-    },
-    {
-      name: '@electron-forge/maker-deb',
-      config: {},
-    },
-    {
-      name: '@electron-forge/maker-rpm',
-      config: {},
-    },
+    new MakerZIP({}, ['darwin']),
+    new MakerDeb({})
   ],
   plugins: [
     {
