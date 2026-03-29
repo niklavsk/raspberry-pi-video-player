@@ -1,19 +1,18 @@
-import { VIDEO_FOLDER } from '@/config';
+import { protocol } from 'electron';
+import path from 'node:path';
+import fs from 'node:fs';
 
-const { protocol } = require('electron');
-const path = require('node:path');
-const fs = require('node:fs');
-
-export const registerStreamProtocol = () => {
+export const registerStreamProtocol = (getVideoBaseFolder) => {
 	protocol.handle('app', (req) => {
 		const { host, pathname } = new URL(req.url);
+		const videoBaseFolder = getVideoBaseFolder();
 
 		if (host === 'video') {
 			const fileName = decodeURIComponent(pathname.substring(1));
-			const videoPath = path.join(VIDEO_FOLDER, fileName);
+			const videoPath = path.join(videoBaseFolder, fileName);
 
-			// Security: keep requests inside VIDEO_FOLDER
-			const relativePath = path.relative(VIDEO_FOLDER, videoPath);
+			// Security: keep requests inside the video folder
+			const relativePath = path.relative(videoBaseFolder, videoPath);
 			const isSafe = relativePath && !relativePath.startsWith('..') && !path.isAbsolute(relativePath);
 			if (!isSafe) {
 				return new Response('Forbidden', { status: 403, headers: { 'content-type': 'text/plain' } });
@@ -53,4 +52,4 @@ export const registerStreamProtocol = () => {
 
 		return new Response('Not Found', { status: 404, headers: { 'content-type': 'text/plain' } });
 	});
-}
+};

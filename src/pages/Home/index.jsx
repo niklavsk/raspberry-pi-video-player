@@ -112,13 +112,16 @@ const Home = () => {
 		};
 
 		loadVideoFiles();
+
+		// Expose loadVideoFiles to be called from a button
+		window.loadVideoFiles = loadVideoFiles;
 	}, []);
 
 	// Effect to play video when currentVideo changes
 	useEffect(() => {
 		if (currentVideo && videoRef.current) {
 			const videoElement = videoRef.current;
-
+			
 			const onLoadedMetadata = () => {
 				if (isSwitchingFolders.current) {
 					const seekTime = calculateSeekTime(folders[currentFolderIndex]);
@@ -174,6 +177,14 @@ const Home = () => {
 			};
 
 			switch (e.key) {
+				// case 'f':
+				// 	if (document.fullscreenElement) {
+				// 		document.exitFullscreen();
+				// 	} else {
+				// 		videoRef.current.requestFullscreen();
+				// 	}
+				// 	break;
+					
 				case 'n':
 					changeFolder(1);
 					break;
@@ -191,6 +202,23 @@ const Home = () => {
 			document.removeEventListener('keydown', handleKeyDown);
 		};
 	}, [currentFolderIndex, folders]);
+
+	if (videos.length === 0) {
+		return (
+			<div className="container">
+				<h1>🎬 Electron Video Player</h1>
+				{loading ? (
+					<p>Loading videos...</p>
+				) : (
+					<div>
+						<p>No videos found.</p>
+						<button onClick={() => window.loadVideoFiles()}>Select Folder</button>
+					</div>
+				)}
+				{error && <p>Error: {error}</p>}
+			</div>
+		);
+	}
 
 	if (APP_MODE === 'prod') {
 		return (
